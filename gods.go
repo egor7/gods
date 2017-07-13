@@ -37,6 +37,7 @@ const (
 var (
 	netDevs = map[string]struct{}{
 		"wlp1s0:": {},
+		"enp0s3:": {},
 	}
 	cores = runtime.NumCPU() // count of cores to scale cpu usage
 	rxOld = 0
@@ -113,13 +114,13 @@ func updatePower() string {
 	var plugged, err = ioutil.ReadFile(powerSupply + "/AC/online")
 
 	if err != nil {
-		return "ERR"
+		return "ERR1"
 	}
 
 	batts, err := ioutil.ReadDir(powerSupply)
 
 	if err != nil {
-		return "ERR"
+		return "ERR2"
 	}
 
 	for _, batt := range batts {
@@ -136,26 +137,27 @@ func updatePower() string {
 		curNow += batteryValues.SearchForInt([]string{"POWER_SUPPLY_CURRENT_NOW", "POWER_SUPPLY_POWER_NOW"})
 	}
 
-	if enFull == 0 { // Battery found but no readable full file.
-		return "ERR"
+	if plugged[0] == '1' {
+		return fmt.Sprintf("%s", pluggedSign)
+	}
+
+	if enFull == 0 || curNow == 0 { // Battery found but no readable full file.
+		return "ERR3"
 	}
 
 	enPerc = enNow * 100 / enFull
 	icon := unpluggedSign
 	timeRemaining := ""
 
-	if plugged[0] == '1' {
-		icon = pluggedSign
-	} else if curNow != 0 {
-		remaining := float32(enNow) / float32(curNow)
-		time_in_min := int(remaining * 60)
-		hours := time_in_min / 60
-		time_in_min -= hours * 60
+	remaining := float32(enNow) / float32(curNow)
+	time_in_min := int(remaining * 60)
+	hours := time_in_min / 60
+	time_in_min -= hours * 60
 
-		timeRemaining = fmt.Sprintf("|%02d:%02d", hours, time_in_min)
-	}
+	timeRemaining = fmt.Sprintf("|%02d:%02d", hours, time_in_min)
 
 	return fmt.Sprintf("%s%2d%s", icon, enPerc, timeRemaining)
+
 }
 
 // updateCPUUse reads the last minute sysload and scales it to the core count
