@@ -5,6 +5,10 @@
 // by something else ("CPU", "MEM", "|" for separators, …).
 //
 // For license information see the file LICENSE
+
+// CPU%49|MEM%21|BAT%76|06:12|NETv^333K|2017-07-10|20:41:34
+//⚅49|≡21|⚡76|06:12|📶 ↕333K|2017-07-10|20:41🗠◆
+
 package main
 
 import (
@@ -19,16 +23,15 @@ import (
 )
 
 const (
-	unpluggedSign = "BAT"
-	pluggedSign   = "AC"
+	unpluggedSign = "≡"
+	pluggedSign   = "⚡"
 
-	cpuSign = "CPU"
-	memSign = "MEM"
-	netSign = "NET"
+	cpuSign = "⚅"
+	memSign = "ߦ" // "🗠"
+	netSign = "📶"
 
 	floatSeparator = "."
-	dateSeparator  = "|"
-	fieldSeparator = " | "
+	fieldSeparator = "|"
 )
 
 var (
@@ -44,13 +47,17 @@ var (
 func velocity(vel int) string {
 	velMB := vel / 1000000
 	if velMB != 0 {
-		return fmt.Sprintf("%3dM", velMB)
+		return fmt.Sprintf("%03dM", velMB)
 	}
 	velKB := vel / 1000
 	if velKB != 0 {
-		return fmt.Sprintf("%3dK", velKB)
+		return fmt.Sprintf("%03dK", velKB)
 	}
-	return fmt.Sprintf("%3dB", vel)
+	velB := vel / 1
+	if velB != 0 {
+		return fmt.Sprintf("%03dB", velB)
+	}
+	return fmt.Sprintf("····")
 }
 
 // updateNetUse reads current transfer rates of certain network interfaces
@@ -82,17 +89,21 @@ func updateNetUse() string {
 
 	defer func() { rxOld, txOld = rxNow, txNow }()
 
-	var download, upload string = " ", " "
+	var load string = "·"
 
 	if rxNow-rxOld != 0.0 {
-		download = "↓"
+		load = "↓"
 	}
 
 	if txNow-txOld != 0.0 {
-		upload = "↑"
+		load = "↑"
 	}
 
-	return fmt.Sprintf("%s %s%s %s", netSign, upload, download, velocity(rxNow-rxOld+txNow-txOld))
+	if rxNow-rxOld != 0.0 && txNow-txOld != 0.0 {
+		load = "↕"
+	}
+
+	return fmt.Sprintf("%s%s%s", netSign, load, velocity(rxNow-rxOld+txNow-txOld))
 }
 
 // updatePower reads the current battery and power plug status
@@ -141,10 +152,10 @@ func updatePower() string {
 		hours := time_in_min / 60
 		time_in_min -= hours * 60
 
-		timeRemaining = fmt.Sprintf(" [%2d:%02d]", hours, time_in_min)
+		timeRemaining = fmt.Sprintf("|%02d:%02d", hours, time_in_min)
 	}
 
-	return fmt.Sprintf("%s %3d%s", icon, enPerc, timeRemaining)
+	return fmt.Sprintf("%s%2d%s", icon, enPerc, timeRemaining)
 }
 
 // updateCPUUse reads the last minute sysload and scales it to the core count
@@ -161,7 +172,7 @@ func updateCPUUse() string {
 	if err != nil {
 		return cpuSign + "ERR"
 	}
-	return fmt.Sprintf("%s%3d", cpuSign, int(load*100.0/float32(cores)))
+	return fmt.Sprintf("%s%02d", cpuSign, int(load*100.0/float32(cores)))
 }
 
 // updateMemUse reads the memory used by applications and scales to [0, 100]
@@ -196,7 +207,7 @@ func updateMemUse() string {
 			done |= 8
 		}
 	}
-	return fmt.Sprintf("%s%3d", memSign, used*100/total)
+	return fmt.Sprintf("%s%02d", memSign, used*100/total)
 }
 
 func getHostname() (hostname string) {
@@ -216,9 +227,9 @@ func main() {
 			updateMemUse(),
 			updatePower(),
 			updateNetUse(),
-			time.Now().Local().Format("Mon 02 " + dateSeparator + " 15:04:05"),
+			time.Now().Local().Format("01.02|15:04"),
 		}
-		exec.Command("xsetroot", "-name", strings.Join(status, fieldSeparator)).Run()
+		exec.Command("xsetroot", "-name", " "+strings.Join(status, fieldSeparator)).Run()
 
 		// sleep until beginning of next second
 		var now = time.Now()
