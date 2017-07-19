@@ -223,13 +223,18 @@ func getHostname() (hostname string) {
 // main updates the dwm statusbar every second
 func main() {
 	for {
+		dt := time.Now().Local()
+		_, w := dt.ISOWeek()
+		d := dt.Weekday()
+		//dt.Format("01.02|15:04")
+
 		var status = []string{
 			//getHostname(),
 			updateCPUUse(),
 			updateMemUse(),
 			updatePower(),
 			updateNetUse(),
-			time.Now().Local().Format("01.02|15:04"),
+			fmt.Sprintf("%02dw%d|%s", w, d, dt.Format("15:04")),
 		}
 		exec.Command("xsetroot", "-name", " "+strings.Join(status, fieldSeparator)).Run()
 
